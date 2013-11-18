@@ -32,5 +32,35 @@ public class BluetoothService extends BundleMessengerService{
 	}
 
 
+	//internal routines
+	
+	protected void handleNotConnectedState(){
+		//TODO implement	
+	}
+	protected void handleConnectedState(){
+		//TODO implement
+	}
+	
+	
+	protected void connectToAvailableContainer(){
+		//TODO implement
+	}
+	protected void onMultipleContainerAvailable(){
+		//TODO implement	
+	}
+	protected void sendBluetoothData(Bundle b){
+		//TODO implement
+	}
+	protected void onBluetoothDataRecv(Bundle b){
+		//TODO implement
+	}
+	protected void disconnect(){
+		//TODO implement
+	}
+	protected void onDisconnected(){
+		//TODO implement
+	}
+	
+	
 	
 }
