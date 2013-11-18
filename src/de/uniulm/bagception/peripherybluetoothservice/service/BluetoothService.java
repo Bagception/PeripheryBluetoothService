@@ -11,8 +11,10 @@ public class BluetoothService extends BundleMessengerService{
 	
 	@Override
 	protected void handleMessage(Message m) {
+		LOG.out(this, "handleMessage");
 		for(String keys:m.getData().keySet()){
 			LOG.out(this, keys+": "+m.getData().getString(keys));
+			
 		}
 		
 		if (m.getData().getString("cmd").equals("PING")){
@@ -25,13 +27,10 @@ public class BluetoothService extends BundleMessengerService{
 
 	@Override
 	protected void onFirstInit() {
-		LOG.out(this, "BT CLIENT SERVICE");
+		
 		
 	}
 
-	
-	
-	
 
 	
 }
