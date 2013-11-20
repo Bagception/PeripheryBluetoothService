@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
-import de.uniulm.bagception.peripherybluetoothservice.response.Response;
+import de.uniulm.bagception.protocol.bundle.constants.Response;
 
 public class ResponseSystem {
 
@@ -35,7 +35,7 @@ public class ResponseSystem {
 	
 	public void makeResponse_askForSpecificDevice(ArrayList<BluetoothDevice> devices){
 		Bundle b = new Bundle();
-		
+		pendingUserInteractions.remove(confirmEstablishingConnection);
 		b.putString(Response.RESPONSE_TYPE_KEY, Response.RESPONSE_TYPE_VALUE_Ask_ForSpecificDevice);
 		b.putParcelableArrayList(Response.RESPONSE_PAYLOAD_CONNECTABLE_DEVICES, devices);
 		service.sendResponseBundle(b);
