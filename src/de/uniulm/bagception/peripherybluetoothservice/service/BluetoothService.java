@@ -18,10 +18,11 @@ import de.uniulm.bagception.bluetooth.BagceptionBluetoothUtil;
 import de.uniulm.bagception.bluetooth.CheckReachableCallback;
 import de.uniulm.bagception.bluetoothservermessengercommunication.MessengerConstants;
 import de.uniulm.bagception.bluetoothservermessengercommunication.service.BundleMessengerService;
+import de.uniulm.bagception.protocol.bundle.BundleProtocolCallback;
 import de.uniulm.bagception.protocol.bundle.constants.Commands;
 
 public class BluetoothService extends BundleMessengerService implements
-		CheckReachableCallback, ResponseSystem.Interaction {
+		CheckReachableCallback, ResponseSystem.Interaction, BundleProtocolCallback{
 
 	// String buffer for outgoing messages
 	private StringBuffer mOutStringBuffer;
@@ -95,19 +96,7 @@ public class BluetoothService extends BundleMessengerService implements
 		} else if (b.getString("cmd").equals(Commands.TRIGGER_SCAN_DEVICES)) {
 			getPairedBagceptionDevicesInRangeAsync();
 		} else if (b.getString("cmd").equals("msg")) {
-			// TODO
-			// client send
-			LOG.out(this, "DAS MUSS AN DEN SERVER: " + b.getString("payload"));
-			// client.send(b.getString("payload"));
-			try {
-				// socket.getOutputStream().write(b.getString("payload").getBytes());
-				btclient.write("test");
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				// socket closed
-				e.printStackTrace();
-			}
-
+			btclient.send(b);
 		}
 	}
 
@@ -134,7 +123,8 @@ public class BluetoothService extends BundleMessengerService implements
 		// TODO implement
 		// connect with server socket
 		try {
-			btclient = new BTClient(device, BagceptionBTServiceInterface.BT_UUID);
+			btclient = new BTClient(device, BagceptionBTServiceInterface.BT_UUID,this);
+			btclient.startListeningForIncomingBytes();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -246,5 +236,12 @@ public class BluetoothService extends BundleMessengerService implements
 			// TODO todo?
 		}
 
+	}
+
+	//BundleProtocolCallback
+	@Override
+	public void onBundleRecv(Bundle bundle) {
+		sendMessageBundle(bundle);
+		
 	}
 }

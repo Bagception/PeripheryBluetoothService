@@ -3,13 +3,14 @@ package de.uniulm.bagception.peripherybluetoothservice.service;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Locale;
 import java.util.UUID;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.os.Bundle;
 import android.util.Log;
+import de.uniulm.bagception.protocol.bundle.BundleProtocolCallback;
 
 public class BTClient implements Runnable {
 	private Thread recvThread;
@@ -20,10 +21,14 @@ public class BTClient implements Runnable {
 	private InputStream clientSocketInStream;
 	private OutputStream clientSocketOutStream;
 
-	public BTClient(BluetoothDevice device, String uuid) throws IOException {
+	private final BundleProtocolmpl protocol;
 
+	public BTClient(BluetoothDevice device, String uuid, BundleProtocolCallback callback) throws IOException {
+
+		this.protocol = new BundleProtocolmpl(callback);
 		this.device = device;
 		this.uuid = UUID.fromString(uuid);
+		
 	}
 
 	// executes itself in another thread and listens
@@ -44,9 +49,9 @@ public class BTClient implements Runnable {
 			clientSocket = device.createRfcommSocketToServiceRecord(uuid);
 
 			Log.d("bt", clientSocket.toString());
+			clientSocket.connect();
 			clientSocketInStream = clientSocket.getInputStream();
 			clientSocketOutStream = clientSocket.getOutputStream();
-			clientSocket.connect();
 			Log.d("bt", "connected");
 		} catch (IOException connectException) {
 			// Unable to connect; close the socket and get out.
@@ -74,14 +79,8 @@ public class BTClient implements Runnable {
 					listening = false;
 					break;
 				}
-				// Send the obtained bytes to the UI Activity.
-
-				// send to UI
-				/*
-				 * mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-				 * .sendToTarget();
-				 */
-				Log.d("input", new String(buffer, 0, bytes));
+				
+				protocol.bytesRecv(buffer,bytes);
 			} catch (IOException e) {
 				e.printStackTrace();
 				break;
@@ -100,8 +99,16 @@ public class BTClient implements Runnable {
 
 	}
 
-	public void write(String s) throws IOException {
-		clientSocketOutStream.write(s.getBytes());
-		clientSocketOutStream.flush();
+	public void send(Bundle b){
+		try {
+			clientSocketOutStream.write(protocol.getSendableBytes(b));
+			clientSocketOutStream.flush();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
+
+
 }
