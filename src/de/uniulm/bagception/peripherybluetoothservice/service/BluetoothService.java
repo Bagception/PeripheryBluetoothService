@@ -1,17 +1,15 @@
 package de.uniulm.bagception.peripherybluetoothservice.service;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
 import android.os.Bundle;
 import android.os.Message;
-import android.os.ParcelUuid;
+import android.webkit.WebView.FindListener;
 import de.philipphock.android.lib.logging.LOG;
 import de.uniulm.bagception.bluetooth.BagceptionBTServiceInterface;
 import de.uniulm.bagception.bluetooth.BagceptionBluetoothUtil;
@@ -19,16 +17,15 @@ import de.uniulm.bagception.bluetooth.CheckReachableCallback;
 import de.uniulm.bagception.bluetoothservermessengercommunication.MessengerConstants;
 import de.uniulm.bagception.bluetoothservermessengercommunication.service.BundleMessengerService;
 import de.uniulm.bagception.protocol.bundle.BundleProtocolCallback;
-import de.uniulm.bagception.protocol.bundle.constants.Commands;
+import de.uniulm.bagception.protocol.bundle.constants.Command;
+import de.uniulm.bagception.protocol.bundle.constants.StatusCode;
 
 public class BluetoothService extends BundleMessengerService implements
-		CheckReachableCallback, ResponseSystem.Interaction, BundleProtocolCallback{
+		CheckReachableCallback, ResponseSystem.Interaction,
+		BundleProtocolCallback, BTClient.ClientStatusCallback {
 
-	// String buffer for outgoing messages
-	private StringBuffer mOutStringBuffer;
-
-	private BluetoothSocket socket;
 	private BTClient btclient;
+
 	// TODO broadcast recv to resend all responses
 
 	public enum ResponseMode {
@@ -52,7 +49,7 @@ public class BluetoothService extends BundleMessengerService implements
 	}
 
 	// TODO later, init this with config values
-	private ResponseMode responseMode = ResponseMode.MINIMAL;
+	private ResponseMode responseMode = ResponseMode.MAXIMAL;
 	private ResponseSystem responseSystem;
 
 	private final BluetoothAdapter btAdapter = BluetoothAdapter
@@ -65,39 +62,71 @@ public class BluetoothService extends BundleMessengerService implements
 
 	private BluetoothDevice tmp_bt_device_confirm;
 
+	/**
+	 * called by IBinder an activity sends messages, this is where they arrive
+	 * 
+	 * @param b
+	 */
 	@Override
 	protected void handleMessage(Message m) {
 		if (m.what == MessengerConstants.MESSAGE_BUNDLE_MESSAGE) {
 			handleMessageBundle(m.getData());
 		} else if (m.what == MessengerConstants.MESSAGE_BUNDLE_RESPONSE) {
 			responseSystem.handleInteraction(m.getData());
-		} else if (m.what == MessengerConstants.MESSAGE_BUNDLE_STATUS) {
-			// not implemented yet
+		} else if (m.what == MessengerConstants.MESSAGE_BUNDLE_COMMAND) {
+			Command command = Command.getCommand(m.getData());
+			handleCommand(command);
+
 		}
 
 	}
 
-	/**
-	 * called by IBinder an activity sends messages, this is where they arrive
-	 * 
-	 * @param b
-	 */
 	protected void handleMessageBundle(Bundle b) {
 		for (String keys : b.keySet()) {
-			LOG.out(this, keys + ": " + b.getString(keys));
+			LOG.out(this, keys + ": " + b.get(keys));
 
 		}
 
-		if (b.getString("cmd").equals("PING")) {
-			Bundle pongBundle = new Bundle();
-			pongBundle.putString("CMD", "PONG");
-			sendMessageBundle(pongBundle);
-			LOG.out(this, "send pong");
-		} else if (b.getString("cmd").equals(Commands.TRIGGER_SCAN_DEVICES)) {
+		btclient.send(b);
+
+	}
+
+	protected void handleCommand(Command command) {
+		LOG.out(this, "command recv " + command.getCommandCode());
+		switch (command) {
+		case TRIGGER_SCAN_DEVICES:
 			getPairedBagceptionDevicesInRangeAsync();
-		} else if (b.getString("cmd").equals("msg")) {
-			btclient.send(b);
+			break;
+		case PING:
+			sendCommandBundle(Command.getCommandBundle(Command.PONG));
+		case PONG:
+			// nothing to do here, Pong is only on client side
+			break;
+
+		case RESEND_STATUS:
+			LOG.out(this, "RESEND");
+			if (btclient == null) {
+				onDisconnect();
+				return;
+			}
+			if (btclient.isConnected()) {
+				onConnect();
+			} else {
+				onDisconnect();
+			}
+		case DISCONNECT:
+			try {
+				btclient.cancel();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			break;
 		}
+
+	}
+
+	protected void sendStatus(StatusCode code) {
+		sendStatusBundle(StatusCode.getStatusBundle(code));
 	}
 
 	@Override
@@ -110,48 +139,37 @@ public class BluetoothService extends BundleMessengerService implements
 	// states
 
 	protected void handleNotConnectedState() {
-		// TODO implement
+		sendStatusBundle(StatusCode.getStatusBundle(StatusCode.DISCONNECTED));
 	}
 
 	protected void handleConnectedState() {
-		// TODO implement
+		sendStatusBundle(StatusCode.getStatusBundle(StatusCode.CONNECTED));
+
 	}
 
 	// connect
 
 	protected void connectToAvailableContainer(BluetoothDevice device) {
-		// TODO implement
-		// connect with server socket
 		try {
-			btclient = new BTClient(device, BagceptionBTServiceInterface.BT_UUID,this);
+			btclient = new BTClient(device,
+					BagceptionBTServiceInterface.BT_UUID, this, this);
 			btclient.startListeningForIncomingBytes();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
 
 	// data transmission
 
-	protected void sendBluetoothData(Bundle b) {
-		// TODO implement
-	}
-
 	protected void onBluetoothDataRecv(Bundle b) {
 		sendMessageBundle(b);
 	}
 
-	// disconnection
-
-	protected void disconnect() {
-		// TODO implement
-	}
-
-	protected void onDisconnected() {
-		// TODO implement
-	}
-
-	// reachability check
+	/*
+	 * ############################################### ###############
+	 * reachability check ##############
+	 * #################################################
+	 */
 
 	protected void getPairedBagceptionDevicesInRangeAsyncDone() {
 		LOG.out(this, "reachable scan done");
@@ -220,7 +238,11 @@ public class BluetoothService extends BundleMessengerService implements
 
 	}
 
-	// ResponseSystem.Interaction
+	/*
+	 * ############################################### //########
+	 * ResponseSystem.Interaction ###########
+	 * ################################################
+	 */
 
 	@Override
 	public void interactionFor_askForSpecificDevice(BluetoothDevice d) {
@@ -238,10 +260,33 @@ public class BluetoothService extends BundleMessengerService implements
 
 	}
 
-	//BundleProtocolCallback
+	/*
+	 * ############################################### ###########
+	 * BundleProtocolCallback ###########
+	 * ################################################
+	 */
+
 	@Override
 	public void onBundleRecv(Bundle bundle) {
 		sendMessageBundle(bundle);
-		
+
 	}
+
+	/*
+	 * ############################################### //###########
+	 * BTClient.ClientStatusCallbac ###########
+	 * ################################################
+	 */
+
+	@Override
+	public void onConnect() {
+		handleConnectedState();
+
+	}
+
+	@Override
+	public void onDisconnect() {
+		handleNotConnectedState();
+	}
+
 }

@@ -7,14 +7,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import de.uniulm.bagception.protocol.bundle.constants.Response;
+import de.uniulm.bagception.protocol.bundle.constants.ResponseAnswer;
 
 public class ResponseSystem {
 
 	private final BluetoothService service;	
-	private final ConcurrentHashMap<String, Bundle> pendingUserInteractions = new ConcurrentHashMap<String, Bundle>();
 	
-	private final String askForSpecificDevice = "askForSpecificDevice";
-	private final String confirmEstablishingConnection = "confirmEstablishingConnection";
+	
+	private final ConcurrentHashMap<Integer, Bundle> pendingUserInteractions = new ConcurrentHashMap<Integer, Bundle>();
 	
 
 	
@@ -28,49 +28,80 @@ public class ResponseSystem {
 	}
 	
 	public void resendAll(){
-		for (Map.Entry<String, Bundle> set:pendingUserInteractions.entrySet()){
+		for (Map.Entry<Integer, Bundle> set:pendingUserInteractions.entrySet()){
 			service.sendResponseBundle(set.getValue());
 		}
+
 	}
 	
+	/*
+	 * ################################################# 
+	 * ###############   handle response ->#############
+	 * #################################################
+	 */
+	
+		
 	public void makeResponse_askForSpecificDevice(ArrayList<BluetoothDevice> devices){
-		Bundle b = new Bundle();
-		pendingUserInteractions.remove(confirmEstablishingConnection);
-		b.putString(Response.RESPONSE_TYPE_KEY, Response.RESPONSE_TYPE_VALUE_Ask_ForSpecificDevice);
-		b.putParcelableArrayList(Response.RESPONSE_PAYLOAD_CONNECTABLE_DEVICES, devices);
+		
+		
+		Bundle b = Response.getResponseBundle(Response.Ask_For_Specific_Device);
+		b.putParcelableArrayList(Response.EXTRA_KEYS.PAYLOAD, devices);
+		
+		pendingUserInteractions.remove(ResponseAnswer.Confirm_Established_Connection.getResponseAnswerCode());
+		
 		service.sendResponseBundle(b);
-		pendingUserInteractions.put(askForSpecificDevice, b);
+		pendingUserInteractions.put(Response.Ask_For_Specific_Device.getResponseCode(), b);
 
 	}
 	
 	public void clearResponseRequestFor_askForSpecificDevice(){
-		pendingUserInteractions.remove(askForSpecificDevice);
+		pendingUserInteractions.remove(Response.Ask_For_Specific_Device);
 	}
 	
 	public void makeResponse_confirmEstablishingConnection(BluetoothDevice device){
-		Bundle b = new Bundle();
 		
-		b.putString(Response.RESPONSE_TYPE_KEY, Response.RESPONSE_TYPE_VALUE_confirmEstablishingConnection);
-		b.putParcelable(Response.RESPONSE_PAYLOAD_CONNECTABLE_DEVICE, device);
+		Bundle b = Response.getResponseBundle(Response.Confirm_Established_Connection);
+		b.putParcelable(Response.EXTRA_KEYS.PAYLOAD, device);
+		
+		pendingUserInteractions.remove(ResponseAnswer.Ask_For_Specific_Device.getResponseAnswerCode());
+		
 		service.sendResponseBundle(b);
-		pendingUserInteractions.put(confirmEstablishingConnection, b);
+		pendingUserInteractions.put(Response.Confirm_Established_Connection.getResponseCode(), b);
+		
+		
 	}
 	public void clearResponseRequestFor_confirmEstablishingConnection(BluetoothDevice device){
-		pendingUserInteractions.remove(confirmEstablishingConnection);
+		pendingUserInteractions.remove(Response.Confirm_Established_Connection);
 	}
 	
+	
+	/*
+	 * ################################################# 
+	 * ###########   handle responseAnswer <-###########
+	 * #################################################
+	 */
+
+	
+	/**
+	 * handle answers
+	 * @param b
+	 */
 	public void handleInteraction(Bundle b){
-		if (b.getString(Response.RESPONSE_TYPE_KEY).equals(Response.RESPONSE_TYPE_VALUE_Ask_ForSpecificDevice)){
-			BluetoothDevice device=b.getParcelable(Response.RESPONSE_PAYLOAD_CONNECTABLE_DEVICE_replyDevice);
+		
+		ResponseAnswer r = ResponseAnswer.getResponseAnswer(b);
+		switch (r){
+		case Ask_For_Specific_Device:
+			BluetoothDevice device = b.getParcelable(ResponseAnswer.EXTRA_KEYS.PAYLOAD);
 			service.interactionFor_askForSpecificDevice(device);
+			break;
 			
-		}else if (b.getString(Response.RESPONSE_TYPE_KEY).equals(Response.RESPONSE_TYPE_VALUE_confirmEstablishingConnection)){
-			boolean connect=b.getBoolean(Response.RESPONSE_TYPE_VALUE_confirmEstablishingConnection_replyYES_NO);
-			service.interactionFor_confirmEstablishingConnection(connect);
-			
+		case Confirm_Established_Connection:
+			Boolean boo = b.getBoolean(ResponseAnswer.EXTRA_KEYS.PAYLOAD);
+			service.interactionFor_confirmEstablishingConnection(boo);
+			break;
+		
 		}
 		
-		//TODO continue
 	}
 	
 	public interface Interaction{

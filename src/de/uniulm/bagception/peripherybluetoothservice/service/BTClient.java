@@ -21,10 +21,12 @@ public class BTClient implements Runnable {
 	private InputStream clientSocketInStream;
 	private OutputStream clientSocketOutStream;
 
+	private boolean isConnected = false;
+	private BTClient.ClientStatusCallback clientcallback;
 	private final BundleProtocolmpl protocol;
 
-	public BTClient(BluetoothDevice device, String uuid, BundleProtocolCallback callback) throws IOException {
-
+	public BTClient(BluetoothDevice device, String uuid, BundleProtocolCallback callback, ClientStatusCallback clientCallback) throws IOException {
+		this.clientcallback = clientCallback;
 		this.protocol = new BundleProtocolmpl(callback);
 		this.device = device;
 		this.uuid = UUID.fromString(uuid);
@@ -48,41 +50,46 @@ public class BTClient implements Runnable {
 
 			clientSocket = device.createRfcommSocketToServiceRecord(uuid);
 
-			Log.d("bt", clientSocket.toString());
+			
 			clientSocket.connect();
 			clientSocketInStream = clientSocket.getInputStream();
 			clientSocketOutStream = clientSocket.getOutputStream();
-			Log.d("bt", "connected");
+			
 		} catch (IOException connectException) {
 			// Unable to connect; close the socket and get out.
 			connectException.printStackTrace();
 			try {
 				clientSocket.close();
+				clientcallback.onDisconnect();
+				isConnected=false;
 			} catch (IOException closeException) {
 				closeException.printStackTrace();
 			}
 			return;
 		}
-
+		clientcallback.onConnect();
+		isConnected=true;
 		// manage the connection
 		int bytes = 0;
 		while (listening) {
-			Log.d("bt", "listen");
 			try {
 				// Read from the InputStream
 				Log.d("bt", "before read");
 				bytes = clientSocketInStream.read(buffer);
 				Log.d("bt", "after read");
 				if (bytes == -1) {
-					Log.d("bt", "close");
 					// connection remotely closed
 					listening = false;
+					clientcallback.onDisconnect();
+					isConnected=false;
 					break;
 				}
 				
 				protocol.bytesRecv(buffer,bytes);
 			} catch (IOException e) {
 				e.printStackTrace();
+				clientcallback.onDisconnect();
+				isConnected=false;
 				break;
 			}
 		}
@@ -99,6 +106,10 @@ public class BTClient implements Runnable {
 
 	}
 
+	public boolean isConnected() {
+		return isConnected;
+	}
+	
 	public void send(Bundle b){
 		try {
 			clientSocketOutStream.write(protocol.getSendableBytes(b));
@@ -110,5 +121,11 @@ public class BTClient implements Runnable {
 		
 	}
 
+	
+	public interface ClientStatusCallback{
+		public void onConnect();
+		public void onDisconnect();
+		
+	}
 
 }
