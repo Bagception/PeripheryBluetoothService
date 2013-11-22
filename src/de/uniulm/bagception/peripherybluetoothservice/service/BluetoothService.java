@@ -101,6 +101,8 @@ public class BluetoothService extends BundleMessengerService implements
 			sendCommandBundle(Command.getCommandBundle(Command.PONG));
 		case PONG:
 			// nothing to do here, Pong is only on client side
+		case POLL_ALL_RESPONSES:
+			responseSystem.resendAll();
 			break;
 
 		case RESEND_STATUS:
