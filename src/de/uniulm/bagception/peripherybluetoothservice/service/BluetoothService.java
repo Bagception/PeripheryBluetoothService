@@ -102,6 +102,7 @@ public class BluetoothService extends BundleMessengerService implements
 		case PONG:
 			// nothing to do here, Pong is only on client side
 		case POLL_ALL_RESPONSES:
+			LOG.out(this, "POLL");
 			responseSystem.resendAll();
 			break;
 
