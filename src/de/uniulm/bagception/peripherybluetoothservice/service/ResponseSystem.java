@@ -89,7 +89,14 @@ public class ResponseSystem {
 	public void handleInteraction(Bundle b){
 		
 		ResponseAnswer r = ResponseAnswer.getResponseAnswer(b);
+		boolean isAck = ResponseAnswer.isACK(b);
+		
+		if (isAck){
+			pendingUserInteractions.remove(r.getResponseAnswerCode());
+		}
+		
 		switch (r){
+		
 		case Ask_For_Specific_Device:
 			BluetoothDevice device = b.getParcelable(ResponseAnswer.EXTRA_KEYS.PAYLOAD);
 			service.interactionFor_askForSpecificDevice(device);
