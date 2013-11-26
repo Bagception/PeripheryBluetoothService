@@ -7,8 +7,11 @@ import java.util.UUID;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Message;
+import android.util.Log;
+import android.widget.Toast;
 import de.philipphock.android.lib.logging.LOG;
 import de.uniulm.bagception.bluetooth.BagceptionBTServiceInterface;
 import de.uniulm.bagception.bluetooth.BagceptionBluetoothUtil;
@@ -116,7 +119,9 @@ public class BluetoothService extends BundleMessengerService implements
 			} else {
 				onDisconnect();
 			}
+			break;
 		case DISCONNECT:
+			Log.d("bt_dc", "disconnect recv");
 			try {
 				btclient.cancel();
 			} catch (IOException e) {
@@ -130,9 +135,16 @@ public class BluetoothService extends BundleMessengerService implements
 	protected void sendStatus(StatusCode code) {
 		sendStatusBundle(StatusCode.getStatusBundle(code));
 	}
+	
+	@Override
+	public int onStartCommand(Intent intent, int flags, int startId) {
+		Toast.makeText(this, "start BT mw", Toast.LENGTH_SHORT).show();
+		return super.onStartCommand(intent, flags, startId);
+	}
 
 	@Override
 	protected void onFirstInit() {
+		Toast.makeText(this, "init BT", Toast.LENGTH_SHORT).show();
 		responseSystem = new ResponseSystem(this);
 	}
 
@@ -175,14 +187,14 @@ public class BluetoothService extends BundleMessengerService implements
 
 	protected void getPairedBagceptionDevicesInRangeAsyncDone() {
 		
-		//\\\\\\\\\ DEBUG CODE ///////////
-		if (!DEBUG_SWITCH){
-			DEBUG_SWITCH=true;
-		}else{
-			BluetoothDevice d = bagceptionDevicesInRange.get(0);
-			bagceptionDevicesInRange.add(d);
-		}
-		//////////// DEBUG CODE \\\\\\\\\\
+//		//\\\\\\\\\ DEBUG CODE ///////////
+//		if (!DEBUG_SWITCH){
+//			DEBUG_SWITCH=true;
+//		}else{
+//			BluetoothDevice d = bagceptionDevicesInRange.get(0);
+//			bagceptionDevicesInRange.add(d);
+//		}
+//		//////////// DEBUG CODE \\\\\\\\\\
 		
 		if (bagceptionDevicesInRange.size() == 0) {
 			// nothing in range.. pause? //TODO
@@ -298,5 +310,7 @@ public class BluetoothService extends BundleMessengerService implements
 	public void onDisconnect() {
 		handleNotConnectedState();
 	}
+
+	
 
 }
