@@ -9,7 +9,6 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
 import android.os.Message;
-import android.webkit.WebView.FindListener;
 import de.philipphock.android.lib.logging.LOG;
 import de.uniulm.bagception.bluetooth.BagceptionBTServiceInterface;
 import de.uniulm.bagception.bluetooth.BagceptionBluetoothUtil;
