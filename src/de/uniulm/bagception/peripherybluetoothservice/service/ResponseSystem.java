@@ -93,6 +93,8 @@ public class ResponseSystem {
 		
 		if (isAck){
 			pendingUserInteractions.remove(r.getResponseAnswerCode());
+			
+			return;
 		}
 		
 		switch (r){
