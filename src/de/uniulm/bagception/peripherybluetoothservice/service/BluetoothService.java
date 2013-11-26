@@ -26,7 +26,6 @@ public class BluetoothService extends BundleMessengerService implements
 
 	private BTClient btclient;
 
-	// TODO broadcast recv to resend all responses
 
 	public enum ResponseMode {
 
@@ -38,14 +37,14 @@ public class BluetoothService extends BundleMessengerService implements
 		 * with this design, we can implement smart services that handles
 		 * interactions implicitly
 		 */
-		MINIMAL, // implementation progress: 0 //TODO
+		MINIMAL, 
 
 		/**
 		 * the service performs operations in background but halts on every
 		 * decision, even if it is the only option(like connection to only one
 		 * device) this mode is intended to be used with your primary smartphone
 		 */
-		MAXIMAL // implementation progress: 0 //TODO
+		MAXIMAL 
 	}
 
 	// TODO later, init this with config values

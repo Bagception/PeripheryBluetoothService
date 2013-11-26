@@ -83,7 +83,7 @@ public class ResponseSystem {
 
 	
 	/**
-	 * handle answers
+	 * handles answers
 	 * @param b
 	 */
 	public void handleInteraction(Bundle b){
