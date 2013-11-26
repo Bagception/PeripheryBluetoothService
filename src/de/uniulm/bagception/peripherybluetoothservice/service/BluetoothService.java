@@ -25,6 +25,7 @@ public class BluetoothService extends BundleMessengerService implements
 
 	private BTClient btclient;
 
+	private boolean DEBUG_SWITCH=false;
 
 	public enum ResponseMode {
 
@@ -173,8 +174,16 @@ public class BluetoothService extends BundleMessengerService implements
 	 */
 
 	protected void getPairedBagceptionDevicesInRangeAsyncDone() {
-		LOG.out(this, "reachable scan done");
-		LOG.out(this, bagceptionDevicesInRange.size() + " devices in range");
+		
+		//\\\\\\\\\ DEBUG CODE ///////////
+		if (!DEBUG_SWITCH){
+			DEBUG_SWITCH=true;
+		}else{
+			BluetoothDevice d = bagceptionDevicesInRange.get(0);
+			bagceptionDevicesInRange.add(d);
+		}
+		//////////// DEBUG CODE \\\\\\\\\\
+		
 		if (bagceptionDevicesInRange.size() == 0) {
 			// nothing in range.. pause? //TODO
 		} else if (bagceptionDevicesInRange.size() == 1) {
