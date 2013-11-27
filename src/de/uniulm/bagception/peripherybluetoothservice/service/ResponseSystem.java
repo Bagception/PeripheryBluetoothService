@@ -89,13 +89,13 @@ public class ResponseSystem {
 	public void handleInteraction(Bundle b){
 		
 		ResponseAnswer r = ResponseAnswer.getResponseAnswer(b);
-		boolean isAck = ResponseAnswer.isACK(b);
+		//boolean isAck = ResponseAnswer.isACK(b);
 		
-		if (isAck){
-			pendingUserInteractions.remove(r.getResponseAnswerCode());
+		//if (isAck){
+		pendingUserInteractions.remove(r.getResponseAnswerCode());
 			
-			return;
-		}
+		//	return;
+		//}
 		
 		switch (r){
 		
@@ -107,6 +107,9 @@ public class ResponseSystem {
 		case Confirm_Established_Connection:
 			Boolean boo = b.getBoolean(ResponseAnswer.EXTRA_KEYS.PAYLOAD);
 			service.interactionFor_confirmEstablishingConnection(boo);
+			break;
+			
+		case NOT_AN_RESPONSE_ANSWER:
 			break;
 		
 		}
