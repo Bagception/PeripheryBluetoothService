@@ -7,24 +7,21 @@ import java.util.UUID;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.content.Intent;
 import android.os.Bundle;
-import android.os.Message;
 import android.util.Log;
-import android.widget.Toast;
 import de.philipphock.android.lib.logging.LOG;
 import de.uniulm.bagception.bluetooth.BagceptionBTServiceInterface;
-import de.uniulm.bagception.bluetooth.BagceptionBluetoothUtil;
-import de.uniulm.bagception.bluetooth.CheckReachableCallback;
-import de.uniulm.bagception.bluetoothservermessengercommunication.MessengerConstants;
-import de.uniulm.bagception.bluetoothservermessengercommunication.service.BundleMessengerService;
+import de.uniulm.bagception.bluetoothclientmessengercommunication.actor.BundleMessageReactor;
+import de.uniulm.bagception.bluetoothclientmessengercommunication.service.BundleMessengerService;
+import de.uniulm.bagception.bluetoothclientmessengercommunication.util.BagceptionBluetoothUtil;
+import de.uniulm.bagception.bluetoothclientmessengercommunication.util.CheckReachableCallback;
 import de.uniulm.bagception.protocol.bundle.BundleProtocolCallback;
 import de.uniulm.bagception.protocol.bundle.constants.Command;
 import de.uniulm.bagception.protocol.bundle.constants.StatusCode;
 
 public class BluetoothService extends BundleMessengerService implements
 		CheckReachableCallback, ResponseSystem.Interaction,
-		BundleProtocolCallback, BTClient.ClientStatusCallback {
+		BundleProtocolCallback, BTClient.ClientStatusCallback, BundleMessageReactor {
 
 	private BTClient btclient;
 
@@ -64,100 +61,32 @@ public class BluetoothService extends BundleMessengerService implements
 
 	private BluetoothDevice tmp_bt_device_confirm;
 
-	/**
-	 * called by IBinder an activity sends messages, this is where they arrive
-	 * 
-	 * @param b
-	 */
-	@Override
-	protected void handleMessage(Message m) {
-		if (m.what == MessengerConstants.MESSAGE_BUNDLE_MESSAGE) {
-			handleMessageBundle(m.getData());
-		} else if (m.what == MessengerConstants.MESSAGE_BUNDLE_RESPONSE) {
-			responseSystem.handleInteraction(m.getData());
-		} else if (m.what == MessengerConstants.MESSAGE_BUNDLE_COMMAND) {
-			Command command = Command.getCommand(m.getData());
-			handleCommand(command);
 
-		}
 
-	}
 
-	protected void handleMessageBundle(Bundle b) {
-		for (String keys : b.keySet()) {
-			LOG.out(this, keys + ": " + b.get(keys));
 
-		}
-
-		btclient.send(b);
-
-	}
-
-	protected void handleCommand(Command command) {
-		LOG.out(this, "command recv " + command.getCommandCode());
-		switch (command) {
-		case TRIGGER_SCAN_DEVICES:
-			getPairedBagceptionDevicesInRangeAsync();
-			break;
-		case PING:
-			sendCommandBundle(Command.getCommandBundle(Command.PONG));
-		case PONG:
-			// nothing to do here, Pong is only on client side
-		case POLL_ALL_RESPONSES:
-			LOG.out(this, "POLL");
-			responseSystem.resendAll();
-			break;
-
-		case RESEND_STATUS:
-			LOG.out(this, "RESEND");
-			if (btclient == null) {
-				onDisconnect();
-				return;
-			}
-			if (btclient.isConnected()) {
-				onConnect();
-			} else {
-				onDisconnect();
-			}
-			break;
-		case DISCONNECT:
-			Log.d("bt_dc", "disconnect recv");
-			try {
-				btclient.cancel();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			break;
-		}
-
-	}
-
-	protected void sendStatus(StatusCode code) {
-		sendStatusBundle(StatusCode.getStatusBundle(code));
-	}
 	
-	@Override
-	public int onStartCommand(Intent intent, int flags, int startId) {
-		Toast.makeText(this, "start BT mw", Toast.LENGTH_SHORT).show();
-		return super.onStartCommand(intent, flags, startId);
-	}
+	
 
 	@Override
 	protected void onFirstInit() {
-		Toast.makeText(this, "init BT", Toast.LENGTH_SHORT).show();
+		super.onFirstInit();
 		responseSystem = new ResponseSystem(this);
+
 	}
 
+
+	
 	// internal routines
 
 	// states
 
 	protected void handleNotConnectedState() {
-		sendStatusBundle(StatusCode.getStatusBundle(StatusCode.DISCONNECTED));
+		bmHelper.sendStatusBundle(StatusCode.getStatusBundle(StatusCode.DISCONNECTED));
 	}
 
 	protected void handleConnectedState() {
-		sendStatusBundle(StatusCode.getStatusBundle(StatusCode.CONNECTED));
+		bmHelper.sendStatusBundle(StatusCode.getStatusBundle(StatusCode.CONNECTED));
 
 	}
 
@@ -175,9 +104,6 @@ public class BluetoothService extends BundleMessengerService implements
 
 	// data transmission
 
-	protected void onBluetoothDataRecv(Bundle b) {
-		sendMessageBundle(b);
-	}
 
 	/*
 	 * ############################################### ###############
@@ -225,6 +151,8 @@ public class BluetoothService extends BundleMessengerService implements
 		}
 	}
 
+	
+	
 	protected synchronized void getPairedBagceptionDevicesInRangeAsync() {
 		LOG.out(this, "begin scanning..");
 		bagceptionDevicesInRange.clear();
@@ -288,10 +216,11 @@ public class BluetoothService extends BundleMessengerService implements
 	 * ################################################
 	 */
 
+	//a message is received from client
 	@Override
 	public void onBundleRecv(Bundle bundle) {
-		sendMessageBundle(bundle);
-
+		
+		bmHelper.sendMessageRecvBundle(bundle);
 	}
 
 	/*
@@ -311,6 +240,97 @@ public class BluetoothService extends BundleMessengerService implements
 		handleNotConnectedState();
 	}
 
+
+
+
+	@Override
+	public void onResponseMessage(Bundle b) {
+		//noting to do here
+	}
+
+	@Override
+	public void onStatusMessage(Bundle b) {
+		//noting to do here
+	}
+
+	@Override
+	public void onResponseAnswerMessage(Bundle b){
+		responseSystem.handleInteraction(b);
+	}
+	
+	@Override
+	public void onCommandMessage(Bundle b) {
+		Command command = Command.getCommand(b);
+		LOG.out(this, "command recv " + command.getCommandCode());
+		switch (command) {
+		case TRIGGER_SCAN_DEVICES:
+			getPairedBagceptionDevicesInRangeAsync();
+			break;
+		case PING:
+			bmHelper.sendCommandBundle(Command.getCommandBundle(Command.PONG));
+			break;
+		case PONG:
+			// nothing to do here, Pong is only on client side
+		case POLL_ALL_RESPONSES:
+			LOG.out(this, "POLL");
+			responseSystem.resendAll();
+			break;
+
+		case RESEND_STATUS:
+			LOG.out(this, "RESEND");
+			if (btclient == null) {
+				onDisconnect();
+				return;
+			}
+			if (btclient.isConnected()) {
+				onConnect();
+			} else {
+				onDisconnect();
+			}
+			break;
+		case DISCONNECT:
+			Log.d("bt_dc", "disconnect recv");
+			try {
+				btclient.cancel();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			break;
+		}
+		
+	}
+
+	@Override
+	public void onError(Exception e) {
+		e.printStackTrace();
+	}
+
 	
 
+	public void sendResponseBundle(Bundle b){
+		bmHelper.sendResponseBundle(b);
+	}
+
+
+
+	//data recv from remote endpont via broadcast
+	@Override
+	public void onBundleMessageRecv(Bundle b) {
+		//noting todo here, this is not delivered by broadcasts
+		
+		
+	}
+
+
+
+	// data received from local endpoint, that is data to be send
+	@Override
+	public void onBundleMessageSend(Bundle b) {
+		for (String keys : b.keySet()) {
+			LOG.out(this, keys + ": " + b.get(keys));
+
+		}
+
+		btclient.send(b);		
+	}
 }
