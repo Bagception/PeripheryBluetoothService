@@ -48,7 +48,7 @@ public class BluetoothService extends BundleMessengerService implements
 	}
 
 	// TODO later, init this with config values
-	private ResponseMode responseMode = ResponseMode.MAXIMAL;
+	private ResponseMode responseMode = ResponseMode.MINIMAL;
 	private ResponseSystem responseSystem;
 
 	private final BluetoothAdapter btAdapter = BluetoothAdapter
