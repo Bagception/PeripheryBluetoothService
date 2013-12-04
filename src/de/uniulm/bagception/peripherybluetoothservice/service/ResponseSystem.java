@@ -54,6 +54,13 @@ public class ResponseSystem {
 
 	}
 	
+	public void makeResponse_bluetoothConnection(boolean connected,boolean valueHasChanged){
+		Bundle b = Response.getResponseBundle(Response.BLUETOOTH_CONNECTION);
+		b.putBoolean(Response.EXTRA_KEYS.PAYLOAD, connected);
+		b.putBoolean(Response.EXTRA_KEYS.VALUE_HAS_CHANGED, valueHasChanged);
+		service.sendResponseBundle(b);
+	}
+	
 	public void clearResponseRequestFor_askForSpecificDevice(){
 		pendingUserInteractions.remove(Response.Ask_For_Specific_Device);
 	}

@@ -25,6 +25,7 @@ public class BluetoothService extends BundleMessengerService implements
 
 	private BTClient btclient;
 
+	private boolean lastConnectionState_connected=false;
 	private boolean DEBUG_SWITCH=false;
 
 	public enum ResponseMode {
@@ -232,12 +233,15 @@ public class BluetoothService extends BundleMessengerService implements
 	@Override
 	public void onConnect() {
 		handleConnectedState();
-
+		responseSystem.makeResponse_bluetoothConnection(true,lastConnectionState_connected!=true);
+		lastConnectionState_connected=true;
 	}
 
 	@Override
 	public void onDisconnect() {
 		handleNotConnectedState();
+		responseSystem.makeResponse_bluetoothConnection(false,lastConnectionState_connected!=false);
+		lastConnectionState_connected=false;
 	}
 
 
@@ -250,7 +254,7 @@ public class BluetoothService extends BundleMessengerService implements
 
 	@Override
 	public void onStatusMessage(Bundle b) {
-		//noting to do here
+
 	}
 
 	@Override
