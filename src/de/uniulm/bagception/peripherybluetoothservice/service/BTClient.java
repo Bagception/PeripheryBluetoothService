@@ -25,6 +25,7 @@ public class BTClient implements Runnable {
 	private BTClient.ClientStatusCallback clientcallback;
 	private final BundleProtocolmpl protocol;
 
+	
 	public BTClient(BluetoothDevice device, String uuid, BundleProtocolCallback callback, ClientStatusCallback clientCallback) throws IOException {
 		this.clientcallback = clientCallback;
 		this.protocol = new BundleProtocolmpl(callback);
@@ -39,6 +40,21 @@ public class BTClient implements Runnable {
 		recvThread.start();
 	}
 
+	/**
+	 * 
+	 * @return the name of the remote endpoint. An empty String on error.
+	 * 
+	 */
+	public String getRemoteDeviceName(){
+		if (clientSocket == null){
+			return "";
+		}
+		if (clientSocket.getRemoteDevice() == null){
+			return "";
+		}
+		return clientSocket.getRemoteDevice().getName();
+	}
+	
 	public void run() {
 		byte[] buffer = new byte[1024]; // buffer store for the stream
 		BluetoothAdapter.getDefaultAdapter().cancelDiscovery();
@@ -52,6 +68,7 @@ public class BTClient implements Runnable {
 
 			
 			clientSocket.connect();
+			
 			clientSocketInStream = clientSocket.getInputStream();
 			clientSocketOutStream = clientSocket.getOutputStream();
 			

@@ -83,11 +83,14 @@ public class BluetoothService extends BundleMessengerService implements
 	// states
 
 	protected void handleNotConnectedState() {
-		bmHelper.sendStatusBundle(StatusCode.getStatusBundle(StatusCode.DISCONNECTED));
+		Bundle conn = StatusCode.DISCONNECTED.toBundle();
+		bmHelper.sendStatusBundle(conn);
 	}
 
 	protected void handleConnectedState() {
-		bmHelper.sendStatusBundle(StatusCode.getStatusBundle(StatusCode.CONNECTED));
+		Bundle conn = StatusCode.CONNECTED.toBundle();
+		conn.putString(StatusCode.EXTRA_KEYS.CONNECTED_DEVICE_NAME, btclient.getRemoteDeviceName());
+		bmHelper.sendStatusBundle(conn);
 
 	}
 
